@@ -4,6 +4,7 @@ import numpy as np
 import torch
 from models import CNN_basic
 from pytorch_utils.nn_utils import train
+from pytorch_utils.nn_utils import evaluate
 from torch.utils.data import DataLoader
 from torch.utils.data import TensorDataset
 
@@ -46,7 +47,7 @@ if __name__ == '__main__':
     test_set = test_set / 255
     train_loader, test_loader = init_dataloaders(training_set, test_set,
                                                  batch_size=16)
-    model = CNN_basic(lr=0.01, in_channels=1, out_channels=10,
+    model = CNN_basic(lr=0.001, in_channels=1, out_channels=10,
                       optimizer=torch.optim.Adam)
     if torch.cuda.is_available():
         device = torch.device('cuda')
@@ -55,3 +56,14 @@ if __name__ == '__main__':
     model = model.to(device)
     epochs = 100
     train(model, epochs, model.model.get_optim(), train_loader, device)
+    out_tensor = evaluate(model, test_loader, device)
+    labels = torch.argmax(out_tensor, axis=1)
+    label_series = pd.Series(labels.cpu().numpy())
+    label_series.reset_index(inplace=True, drop=True)
+    imageid_series = pd.Series(range(1, len(labels)+1))
+    imageid_series.reset_index(inplace=True, drop=True)
+    sub_df = pd.DataFrame({'ImageId': imageid_series, 'Label': label_series})
+    sub_df.to_csv(
+        'test_submission.csv',
+        index=False
+    )
