@@ -5,8 +5,10 @@ import torch
 from models import CNN_basic
 from pytorch_utils.nn_utils import train
 from pytorch_utils.nn_utils import evaluate
+from pytorch_utils.nn_utils import cross_val
 from torch.utils.data import DataLoader
 from torch.utils.data import TensorDataset
+import torch.nn.functional as F
 
 
 def read_files(str_train_f, str_test_f):
@@ -29,8 +31,26 @@ def get_target_from_labels(labels):
 
 
 if __name__ == '__main__':
+    optim = torch.optim.Adam
+    lr = 0.001
+    epochs = 100
+    mb_size = 16
+    if torch.cuda.is_available():
+        device = torch.device('cuda')
+    else:
+        device = torch.device('cpu')
+    model = CNN_basic(lr=lr, in_channels=1, out_channels=10,
+                      optimizer=optim)
+    model.to(device)
     # Load CSV MNIST files
     training_set, test_set = read_files('train.csv', 'test.csv')
+    X_train = training_set.iloc[:, 1:].to_numpy()
+    X_train = X_train.reshape((-1, 1, 28, 28))
+    X_train = X_train / 255
+    y_train = get_target_from_labels(training_set.iloc[:, 0].to_numpy())
+    accs = cross_val(model, model.model.get_optim(), epochs, mb_size, X_train,
+                     y_train, 5, F.binary_cross_entropy, device)
+    """
     training_set = training_set.to_numpy()
     training_labels = training_set[:, 0]
     training_target = get_target_from_labels(training_labels)
@@ -46,15 +66,8 @@ if __name__ == '__main__':
     test_set = torch.Tensor(test_set)
     test_set = test_set / 255
     train_loader, test_loader = init_dataloaders(training_set, test_set,
-                                                 batch_size=16)
-    model = CNN_basic(lr=0.001, in_channels=1, out_channels=10,
-                      optimizer=torch.optim.Adam)
-    if torch.cuda.is_available():
-        device = torch.device('cuda')
-    else:
-        device = torch.device('cpu')
+                                                 batch_size=mb_size)
     model = model.to(device)
-    epochs = 100
     train(model, epochs, model.model.get_optim(), train_loader, device)
     out_tensor = evaluate(model, test_loader, device)
     labels = torch.argmax(out_tensor, axis=1)
@@ -67,3 +80,4 @@ if __name__ == '__main__':
         'test_submission.csv',
         index=False
     )
+    """

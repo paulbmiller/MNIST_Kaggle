@@ -50,13 +50,17 @@ class CNN_basic(nn.Module):
         self.model = NeuralNet.Net()
         self.model.add_conv_layer(in_channels, 4, kernel_size=4,
                                   stride=2)
+        self.model.add_dropout(p=0.2)
         self.model.add_leakyrelu()
         self.model.add_conv_layer(4, 16, kernel_size=3, stride=2)
+        self.model.add_dropout(p=0.2)
         self.model.add_leakyrelu()
         self.model.add_maxpool(kernel_size=4, stride=1)
+        self.model.add_dropout(p=0.2)
         self.model.add_leakyrelu()
         self.model.add_layer(Flatten())
         self.model.add_linear(16*3*3, out_channels)
+        self.model.add_dropout(p=0.2)
         self.model.add_sigmoid()
         self.model.init_optim(optimizer, lr)
 
